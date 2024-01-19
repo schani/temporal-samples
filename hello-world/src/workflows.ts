@@ -1,7 +1,6 @@
 import * as workflow from '@temporalio/workflow';
-import type { AutomationNodeRunner } from '@glideapps/automations-test-runner';
 import type * as activities from './activities';
-import { initAutomations } from './automations';
+import { defined } from '@glideapps/ts-necessities';
 
 const { fetchAutomationJSON, fetchRowIDs, evalConditions, runPrimitiveActionNode } = workflow.proxyActivities<
   typeof activities
@@ -10,21 +9,27 @@ const { fetchAutomationJSON, fetchRowIDs, evalConditions, runPrimitiveActionNode
 });
 
 export async function runAutomation(url: string, actionID: string): Promise<void> {
-  const automations = await initAutomations();
-
   const automation = await fetchAutomationJSON(url);
-  const ctx = automations.makeContextForApp(automation);
-  const runner: AutomationNodeRunner = {
-    async fetchRowIDs(actionID: string): Promise<readonly string[]> {
-      return await fetchRowIDs(automation, actionID);
-    },
-    async evalConditions(actionID: string, rowID: string): Promise<number | undefined> {
-      return await evalConditions(automation, actionID, rowID);
-    },
-    async runPrimitiveActionNode(actionID: string, rowID: string, nodeKey: string): Promise<void> {
-      return await runPrimitiveActionNode(automation, actionID, rowID, nodeKey);
-    },
-  };
 
-  await automations.runAutomation(ctx, runner, actionID);
+  const [, builderAction] = automation.builderActions.find(([id]: [id: string]) => id === actionID) ?? [];
+  if (builderAction === undefined) throw new Error(`No builder action found with ID ${actionID}`);
+
+  // const ctx = automations.makeContextForApp(automation);
+
+  const rowIDs = await fetchRowIDs(automation, actionID);
+
+  async function runFlow(rowID: string, flow: any) {
+    for (const primitive of flow.actions) {
+      await runPrimitiveActionNode(automation, actionID, rowID, primitive.key);
+    }
+  }
+
+  for (const rowID of rowIDs) {
+    const index = await evalConditions(automation, actionID, rowID);
+    if (index !== undefined) {
+      await runFlow(rowID, defined(builderAction.action.conditionalFlows[index]).flow);
+    } else if (builderAction.action.elseFlow !== undefined) {
+      await runFlow(rowID, builderAction.action.elseFlow);
+    }
+  }
 }

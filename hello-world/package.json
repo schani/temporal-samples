@@ -6,7 +6,8 @@
     "build": "tsc --build",
     "build.watch": "tsc --build --watch",
     "lint": "eslint .",
-    "start": "ts-node src/worker.ts",
+    "start-workflows": "ts-node src/worker-workflows.ts",
+    "start-activities": "bun run src/worker-activities.ts",
     "start.watch": "nodemon src/worker.ts",
     "workflow": "ts-node src/client.ts",
     "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
@@ -22,16 +23,14 @@
     ]
   },
   "dependencies": {
-    "@glideapps/automations-test-runner": "0.0.25",
+    "@glideapps/automations-test-runner": "0.0.37",
+    "@glideapps/ts-necessities": "^2.1.3",
     "@temporalio/activity": "^1.8.4",
     "@temporalio/client": "^1.8.4",
     "@temporalio/worker": "^1.8.4",
     "@temporalio/workflow": "^1.8.4",
-    "canvas": "^2.11.2",
-    "jsdom": "20.0.1",
     "nanoid": "3.x",
-    "node-fetch": "2.6.7",
-    "web-ffmpeg2": "^0.11.8"
+    "node-fetch": "2.6.7"
   },
   "devDependencies": {
     "@temporalio/testing": "^1.8.4",
